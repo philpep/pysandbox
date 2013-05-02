@@ -79,11 +79,14 @@ class SandboxConfig(object):
 
          - use_subprocess=True (bool): if True, execute() run the code in
            a subprocess
+         - persistent_child (bool): if True, the child process will be
+           persistent.
          - cpython_restricted=False (bool): if True, use CPython restricted
            mode instead of the _sandbox module
         """
         self.recusion_limit = 50
         self._use_subprocess = kw.get('use_subprocess', True)
+        self._persistent_child = kw.get('persistent_child', False)
         if self._use_subprocess:
             self._timeout = DEFAULT_TIMEOUT
             if resource is not None:
@@ -206,6 +209,10 @@ class SandboxConfig(object):
     @property
     def use_subprocess(self):
         return self._use_subprocess
+
+    @property
+    def persistent_child(self):
+        return self._persistent_child
 
     def _get_timeout(self):
         return self._timeout

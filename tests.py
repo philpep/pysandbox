@@ -25,12 +25,15 @@ def parseOptions():
         exit(1)
     return options
 
-def run_tests(options, use_subprocess, cpython_restricted):
-    print("Run tests with cpython_restricted=%s and use_subprocess=%s"
-          % (cpython_restricted, use_subprocess))
+def run_tests(options, use_subprocess, cpython_restricted, persistent_child):
+    print((
+        "Run tests with cpython_restricted=%s, use_subprocess=%s "
+        "and persistent_child=%s") % (
+        cpython_restricted, use_subprocess, persistent_child))
     print("")
     createSandboxConfig.cpython_restricted = cpython_restricted
     createSandboxConfig.use_subprocess = use_subprocess
+    createSandboxConfig.persistent_child = persistent_child
 
     # Get all tests
     all_tests = getTests(globals(), options.keyword)
@@ -73,13 +76,15 @@ def main():
 
     nskipped, nerrors, ntests = 0, 0, 0
     for use_subprocess in (False, True):
-        for cpython_restricted in (False, True):
-            result = run_tests(options, use_subprocess, cpython_restricted)
-            nskipped += result[0]
-            nerrors += result[1]
-            ntests += result[2]
-            if options.raise_exception and nerrors:
-                break
+        for persistent_child in (False, True):
+            for cpython_restricted in (False, True):
+                result = run_tests(options, use_subprocess,
+                                   cpython_restricted, persistent_child)
+                nskipped += result[0]
+                nerrors += result[1]
+                ntests += result[2]
+                if options.raise_exception and nerrors:
+                    break
 
     # Exit
     from sys import exit

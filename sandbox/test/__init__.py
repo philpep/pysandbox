@@ -17,10 +17,14 @@ def createSandboxConfig(*features, **kw):
     if (createSandboxConfig.use_subprocess is not None) \
     and ('use_subprocess' not in kw):
         kw['use_subprocess'] = createSandboxConfig.use_subprocess
+    if (createSandboxConfig.persistent_child is not None) \
+    and ('persistent_child' not in kw):
+        kw['persistent_child'] = createSandboxConfig.persistent_child
     return SandboxConfig(*features, **kw)
 createSandboxConfig.debug = False
 createSandboxConfig.cpython_restricted = None
 createSandboxConfig.use_subprocess = None
+createSandboxConfig.persistent_child = None
 
 def createSandbox(*features):
     config = createSandboxConfig(*features)

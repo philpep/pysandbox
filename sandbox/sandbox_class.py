@@ -28,6 +28,7 @@ class Sandbox(object):
             self.config = SandboxConfig()
         self.protections = [protection() for protection in self.PROTECTIONS]
         self.execute_subprocess = None
+        self._persistent_child = None
         self.call_fork = None
         # set during enable()
         self.frame = None
@@ -53,10 +54,15 @@ class Sandbox(object):
         Call a function in the sandbox.
         """
         if self.config.use_subprocess:
-            if self.call_fork is None:
-                from .subprocess_parent import call_fork
-                self.call_fork = call_fork
-            return self.call_fork(self, func, args, kw)
+            # FIXME: Only work for simples functions wihtout external code
+            if self.config.persistent_child:
+                persistent_child = self.get_persitent_child()
+                return persistent_child.call(func, args, kw)
+            else:
+                if self.call_fork is None:
+                    from .subprocess_parent import call_fork
+                    self.call_fork = call_fork
+                return self.call_fork(self, func, args, kw)
         else:
             return self._call(func, args, kw)
 
@@ -91,10 +97,15 @@ class Sandbox(object):
         namespace.
         """
         if self.config.use_subprocess:
-            if self.execute_subprocess is None:
-                from .subprocess_parent import execute_subprocess
-                self.execute_subprocess = execute_subprocess
-            return self.execute_subprocess(self, code, globals, locals)
+            if self.config.persistent_child:
+                persistent_child = self.get_persitent_child()
+                return persistent_child.execute(
+                    self.config, code, globals, locals)
+            else:
+                if self.execute_subprocess is None:
+                    from .subprocess_parent import execute_subprocess
+                    self.execute_subprocess = execute_subprocess
+                return self.execute_subprocess(self, code, globals, locals)
         else:
             code = proxy(code)
             if globals is not None:
@@ -114,3 +125,20 @@ class Sandbox(object):
             return self.call(func, *args, **kw)
         return callback
 
+    def get_persitent_child(self):
+        if self._persistent_child is not None and \
+                not self._persistent_child.is_alive():
+            self._persistent_child.join()
+            self._persistent_child = None
+        if self._persistent_child is None:
+            from .persistent_child import PersistentChild
+            self._persistent_child = PersistentChild(self.config)
+            self._persistent_child.start()
+        return self._persistent_child
+
+    def __del__(self):
+        if self._persistent_child is not None:
+            if self._persistent_child.is_alive():
+                self._persistent_child.terminate()
+            self._persistent_child.join()
+            self._persistent_child = None
